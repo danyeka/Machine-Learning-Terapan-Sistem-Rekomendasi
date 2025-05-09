@@ -52,33 +52,83 @@ Dengan membangun dua pendekatan, sistem rekomendasi diharapkan memberikan hasil 
 ## Data Understanding
 Dataset yang digunakan dalam proyek ini adalah MovieLens100K, yang berisi 100.000 penilaian dari pengguna untuk berbagai film, dataset ini terdiri dari 4 komponen data yang berbeda yaitu Links Dataset, Movies Dataset, Ratings Dataset, dan Tags Dataset. Dataset diambil dari [https://grouplens.org/datasets/movielens/100k/]
 Dataset MovieLens 100K terdiri dari 4 bagian:
-1. Links Dataset: berisi ID film dari berbagai platform.
-2. Movies Dataset: berisi judul dan genre film.
-3. Ratings Dataset: rating yang diberikan pengguna.
-4. Tags Dataset: label atau kata kunci yang ditambahkan pengguna.
+1. Links Dataset (links.csv)
+   - Jumlah Data: 9742 baris dan 3 kolom.
+   - Uraian Fitur:
+     - movieId: ID unik untuk setiap film.
+     - imdbId: ID film di IMDB.
+     - tmdbId: ID film di TMDB.
+   - Kondisi Data:
+     - Missing Values: Terdapat 8 nilai kosong pada kolom tmdbId.
+     - Duplikat: Tidak ada data duplikat.
+     - Outlier: Tidak dilakukan analisis outlier secara spesifik pada tahap ini.
+3. Movies Dataset (movies.csv):
+   - Jumlah Data: 9742 baris dan 3 kolom.
+   - Uraian Fitur:
+     - movieId: ID unik untuk setiap film.
+     - title: Judul film (termasuk tahun rilis dalam format string).
+     - genres: Genre film (dipisahkan oleh karakter |).
+    - Kondisi Data:
+      - Missing Values: Tidak ada nilai kosong.
+      - Duplikat: Tidak ada data duplikat.
+      - Outlier: Tidak dilakukan analisis outlier secara spesifik pada tahap ini.
+5. Ratings Dataset (ratings.csv):
+   - Jumlah Data: 100836 baris dan 4 kolom.
+   - Uraian Fitur:
+     - userId: ID unik untuk setiap pengguna.
+     - movieId: ID unik untuk setiap film yang diberi rating.
+     - rating: Rating yang diberikan pengguna untuk film (skala 0.5 hingga 5.0).
+     - timestamp: Waktu pemberian rating dalam format Unix timestamp.
+   - Kondisi Data:
+     - Missing Values: Tidak ada nilai kosong.
+     - Duplikat: Tidak ada data duplikat.
+     - Outlier: Tidak dilakukan analisis outlier secara spesifik pada tahap ini. Skala rating yang digunakan adalah 0.5 hingga 5.0.
+7. Tags Dataset (tags.csv)
+   - Jumlah Data: 3683 baris dan 4 kolom.
+   - Uraian Fitur:
+     - userId: ID unik untuk setiap pengguna.
+     - movieId: ID unik untuk setiap film yang diberi tag.
+     - tag: Label atau kata kunci yang ditambahkan pengguna untuk film.
+     - timestamp: Waktu pemberian tag dalam format Unix timestamp.
+     - Kondisi Data:
+     - Missing Values: Tidak ada nilai kosong.
+     - Duplikat: Tidak ada data duplikat.
+     - Outlier: Tidak dilakukan analisis outlier secara spesifik pada tahap ini.
 
 ## Data Preparation
 Pada tahap data preparation dilakukan transformasi berupa pembersihan judul film yang masih mengandung tahun rilis film, melakukan pembuatan kolom baru bernama features dengan cara menggabungkan judul film dan genre.
 
-### General Data Preparation
-- Konversi timestamp ke datetime  
-- Gabungkan data dari beberapa sumber  
-- Bersihkan genre dan judul  
-- Tambahkan kolom fitur gabungan (judul + genre)
+1. Penggabungan Data Awal dan Penanganan Missing Values:
+   - Dataset movies.csv digabungkan dengan kolom tmdbId dari links.csv menggunakan movieId sebagai kunci gabungan (merge dengan    how='left').
+   - Baris yang memiliki nilai tmdbId kosong (NaN) dihapus dari dataframe hasil gabungan (movies_df.dropna(subset=['tmdbId'])). Ini mengatasi 8 missing values yang teridentifikasi pada kolom tmdbId di links.csv.
 
-### Data Preparation untuk Modelling Content Based Filtering 
-- Gunakan TF-IDF untuk mengubah kolom fitur menjadi vektor numerik  
-- Hitung cosine similarity antar film
+2. Pembersihan dan Transformasi Fitur pada movies_df:
+   - Ekstraksi Tahun Rilis: Kolom year dibuat dengan mengekstrak tahun (4 digit angka) dari kolom title.
+   - Pembersihan Judul Film: Tahun rilis dihapus dari kolom title untuk mendapatkan judul film yang bersih.
+   - Penanganan Missing Values pada year: Nilai kosong pada kolom year (jika ada setelah ekstraksi) diisi dengan modus (nilai yang paling sering muncul) dari kolom year, kemudian tipe datanya diubah menjadi integer.
+   - Transformasi Genre: Karakter | pada kolom genres diganti dengan spasi untuk persiapan proses TF-IDF.
+   - Pembuatan Kolom features (untuk Content-Based Filtering): Kolom baru bernama features dibuat dengan menggabungkan isi dari kolom title (yang sudah dibersihkan) dan kolom genres (yang sudah ditransformasi).
+     
+3. Penghapusan Kolom timestamp:
+   - Kolom timestamp dihapus dari dataframe ratings_df.
+   - Kolom timestamp dihapus dari dataframe tags_df.
+   - Catatan: Konversi timestamp ke datetime tidak dilakukan secara eksplisit karena kolom ini dihapus sebelum digunakan dalam pemodelan.
 
-### Data Preparation untuk Modelling Collaborative Filtering
-- Gunakan rating user dan movie sebagai input  
-- Lakukan pembagian data latih dan uji menggunakan pustaka *Surprise*
+4. Penggabungan Dataframe Utama (df):
+   - Dataframe ratings_df (tanpa timestamp) digabungkan dengan movies_df (yang sudah diproses) menggunakan movieId sebagai kunci (merge dengan how='inner').
+   - Hasil gabungan tersebut kemudian digabungkan lagi dengan tags_df (tanpa timestamp) menggunakan userId dan movieId sebagai kunci (merge dengan how='left').
+5. Penghapusan Baris Kosong pada tag:
+   - Baris yang memiliki nilai tag kosong (NaN) setelah penggabungan terakhir dihapus dari dataframe df (df.dropna(subset=['tag'])).
 
-## Modeling
-Pada tahap modelling digunakan 2 model algoritma yang berbeda yaitu Content Based Filtering (Cosine Similarity) dan Collaborative Filtering (Singular Value Decomposition)
+## Data Preparation untuk Modelling Content Based Filtering
+   - Menggunakan TF-IDF (Term Frequency-Inverse Document Frequency) untuk mengubah kolom features (gabungan judul dan genre) pada movies_df menjadi representasi vektor numerik. Ini dilakukan dengan TfidfVectorizer dari sklearn.
+   - Menghitung Cosine Similarity antar film berdasarkan matriks TF-IDF untuk menemukan kemiripan konten antar film.
 
-### Content Based Filtering
-Pada metode *content-based filtering*, model melakukan rekomendasi berdasarkan kesamaan konten film (judul dan genre) dibandingkan dengan film yang diberikan oleh pengguna.
+## Data Preparation untuk Modelling Collaborative Filtering  
+   - Menggunakan data rating pengguna (userId), movieId, dan rating dari ratings_df sebagai input.
+   - Pengaturan Skala Rating: Skala rating didefinisikan secara eksplisit antara 0.5 hingga 5.0 menggunakan objek Reader dari pustaka Surprise (Reader(rating_scale=(0.5, 5.0))). Ini penting untuk memastikan model SVD memahami rentang nilai rating yang mungkin.
+   - Dataset dimuat ke dalam format yang sesuai untuk pustaka Surprise menggunakan Dataset.load_from_df.
+   - Melakukan pembagian data menjadi data latih (trainset) dan data uji (testset) dengan proporsi 80:20 menggunakan fungsi train_test_split dari pustaka Surprise.
 
 #### Cara Kerja dan Parameter
 Langkah-langkah pada *content-based filtering*:
@@ -95,10 +145,9 @@ Langkah-langkah pada *content-based filtering*:
 #### Rekomendasi
 Setelah menghitung kesamaan antarfilm, saya mengurutkan film berdasarkan skor kesamaan tertinggi dan merekomendasikan 10 film teratas yang paling mirip dengan film input. Berikut adalah contoh hasil rekomendasi berbasis *content-based filtering* untuk film  "Jumanji" ,  dan  "Toy Story" :
 
-<img width="315" alt="jumanji" src="https://github.com/user-attachments/assets/abc2281e-17f9-4470-9a87-c91d940d3e07" />
-ggit 
-<img width="327" alt="toy story" src="https://github.com/user-attachments/assets/508b165f-1842-4fe1-91ac-ce46b434ec7d" />
+![jumanji](https://github.com/user-attachments/assets/9c294436-8024-456e-8c5a-a40e0b7eadc1)
 
+![toy story](https://github.com/user-attachments/assets/46ee332e-8149-4b6f-9b64-c7be4a28bd51)
 
 ### Collaborative Filtering
 Model *collaborative filtering* dalam proyek ini dilatih menggunakan data rating pengguna terhadap film. Model mempelajari pola preferensi dengan menguraikan matriks rating menjadi beberapa faktor laten (fitur yang tidak terlihat secara langsung) yang merepresentasikan hubungan antara pengguna dan film.
@@ -134,9 +183,10 @@ Pendekatan  Collaborative Filtering dengan SVD  ini unggul karena tidak memerluk
 ### 4. Rekomendasi Top N Film
 Berikut adalah rekomendasi untuk pengguna dengan  ID 331,  ID 1  berdasarkan prediksi rating tertinggi yang dihasilkan oleh model SVD:
 
-<img width="253" alt="user 331" src="https://github.com/user-attachments/assets/dedd3a9b-91e7-4823-822f-cb5d70fb7124" />
+![user 331](https://github.com/user-attachments/assets/896f9ec0-f67b-4e78-aecb-019fa6e06e61)
 
-<img width="252" alt="user 1" src="https://github.com/user-attachments/assets/ef32b0e4-2450-499a-8914-0a7cfcc53eae" />
+![user 1](https://github.com/user-attachments/assets/31ca92de-b198-4aae-b838-ebe6eeedddd8)
+
 
 
 ### Kelebihan dan Kekurangan
@@ -230,10 +280,10 @@ Nilai MAE yang lebih rendah menandakan bahwa model memiliki kinerja prediksi yan
 RMSE dan MAE sama-sama penting untuk mengevaluasi kinerja model prediksi rating film. Perbedaan utama antara keduanya adalah RMSE lebih menekankan pada kesalahan besar, sehingga lebih sensitif terhadap prediksi yang jauh dari nilai sebenarnya. Sementara itu, MAE memberikan gambaran yang lebih stabil tentang kesalahan prediksi, sehingga membantu dalam menilai konsistensi prediksi.
 
 ### Hasil Proyek Berdasarkan Metrik Evaluasi
--  RMSE : 0.8809
--  MAE : 0.6778
+-  RMSE : 0.8795
+-  MAE : 0.6765
 
-Nilai RMSE sebesar 0.8809 menunjukkan bahwa rata-rata kesalahan kuadrat dari prediksi model relatif kecil, yang menunjukkan bahwa model cukup akurat dalam memberikan prediksi rating. Nilai MAE sebesar 0.6778 menunjukkan rata-rata kesalahan absolut yang rendah, yang berarti model menghasilkan prediksi yang konsisten. Kedua metrik ini mengindikasikan bahwa model dapat memberikan rekomendasi film dengan cukup baik.
+Nilai RMSE sebesar 0.8795 menunjukkan bahwa rata-rata kesalahan kuadrat dari prediksi model relatif kecil, yang menunjukkan bahwa model cukup akurat dalam memberikan prediksi rating. Nilai MAE sebesar 0.6765 menunjukkan rata-rata kesalahan absolut yang rendah, yang berarti model menghasilkan prediksi yang konsisten. Kedua metrik ini mengindikasikan bahwa model dapat memberikan rekomendasi film dengan cukup baik.
 
 ### Fungsi Rekomendasi
 Fungsi `get_recommendations` digunakan untuk memberikan rekomendasi film kepada pengguna tertentu. Fungsi ini bekerja dengan:
