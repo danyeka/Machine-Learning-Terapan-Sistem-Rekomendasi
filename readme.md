@@ -96,6 +96,7 @@ Langkah-langkah pada *content-based filtering*:
 Setelah menghitung kesamaan antarfilm, saya mengurutkan film berdasarkan skor kesamaan tertinggi dan merekomendasikan 10 film teratas yang paling mirip dengan film input. Berikut adalah contoh hasil rekomendasi berbasis *content-based filtering* untuk film  "Jumanji" ,  dan  "Toy Story" :
 
 <img width="315" alt="jumanji" src="https://github.com/user-attachments/assets/abc2281e-17f9-4470-9a87-c91d940d3e07" />
+
 <img width="327" alt="toy story" src="https://github.com/user-attachments/assets/508b165f-1842-4fe1-91ac-ce46b434ec7d" />
 
 
@@ -134,6 +135,7 @@ Pendekatan  Collaborative Filtering dengan SVD  ini unggul karena tidak memerluk
 Berikut adalah rekomendasi untuk pengguna dengan  ID 331,  ID 1  berdasarkan prediksi rating tertinggi yang dihasilkan oleh model SVD:
 
 <img width="253" alt="user 331" src="https://github.com/user-attachments/assets/dedd3a9b-91e7-4823-822f-cb5d70fb7124" />
+
 <img width="252" alt="user 1" src="https://github.com/user-attachments/assets/ef32b0e4-2450-499a-8914-0a7cfcc53eae" />
 
 
