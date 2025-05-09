@@ -96,7 +96,7 @@ Langkah-langkah pada *content-based filtering*:
 Setelah menghitung kesamaan antarfilm, saya mengurutkan film berdasarkan skor kesamaan tertinggi dan merekomendasikan 10 film teratas yang paling mirip dengan film input. Berikut adalah contoh hasil rekomendasi berbasis *content-based filtering* untuk film  "Jumanji" ,  dan  "Toy Story" :
 
 <img width="315" alt="jumanji" src="https://github.com/user-attachments/assets/abc2281e-17f9-4470-9a87-c91d940d3e07" />
-g
+ggit 
 <img width="327" alt="toy story" src="https://github.com/user-attachments/assets/508b165f-1842-4fe1-91ac-ce46b434ec7d" />
 
 
